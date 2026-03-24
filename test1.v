@@ -36,11 +36,11 @@ module ImageHasher (
             case (state)
                 IDLE: begin
                     ready <= 0;
-                    // Fix: Capture the first pixel immediately so it isn't lost
+                   
                     if (pixel_valid) begin
                         buffer[0] <= pixel_data;
                         sum <= pixel_data; 
-                        count <= 1;        // Start count at 1 for the next state
+                        count <= 1;        
                         state <= CAPTURE;
                     end else begin
                         sum <= 0;
@@ -62,7 +62,6 @@ module ImageHasher (
                 end
 
                 GENHASH: begin
-                    // Fix: Use non-blocking assignments (<=) inside a clocked always block
                     for (i = 0; i < 64; i = i + 1) begin
                         current_signature[i] <= (buffer[i] >= (sum >> 6));
                     end
@@ -80,13 +79,12 @@ module ImageHasher (
                 end
             endcase
 
-            // ===== Debug prints =====
+            
             $display("Time: %0t | State: %b | Count: %d | Sum: %d | Ready: %b | Pixel_valid: %b",
                      $time, state, count, sum, ready, pixel_valid);
         end
     end
 
-    // Function remains the same (blocking '=' is correct here because functions are combinatorial)
     function [6:0] hamming_dist(input [63:0] a, input [63:0] b);
         reg [63:0] diff;
         integer j;
