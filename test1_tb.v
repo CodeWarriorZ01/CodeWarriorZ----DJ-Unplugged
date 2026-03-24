@@ -22,13 +22,13 @@ module ImageHasher_tb();
         .duplicate(duplicate), .ready(ready)
     );
 
-    always #5 clk = ~clk;  // 100 MHz clock
+    always #5 clk = ~clk;
 
     initial begin
         $dumpfile("wave.vcd");
         $dumpvars(0, ImageHasher_tb);
 
-        // Initialization at time 0 uses blocking (=)
+        
         clk = 0; 
         reset = 1; 
         pixel_valid = 0; 
@@ -40,23 +40,21 @@ module ImageHasher_tb();
       $readmemh("image_data.hex", test_mem);     // hex file without duplicate signature value
 
 
-        #20 reset <= 0; // Switching to non-blocking for synchronous transitions
+        #20 reset <= 0; 
         #10;
 
-        // Feed 64 pixels with pixel_valid = 1
+       
         for (i = 0; i < 64; i = i + 1) begin
             @(posedge clk);
-            // Fix: Non-blocking assignments (<=) prevent race conditions in simulation
             pixel_data <= test_mem[i]; 
             pixel_valid <= 1;
         end
 
-        // Drop pixel_valid on the cycle immediately following the last valid pixel
+   
         @(posedge clk);
         pixel_valid <= 0;
         pixel_data <= 0;
 
-        // Wait for ready signal or timeout
         fork
             begin
                 wait(ready);
