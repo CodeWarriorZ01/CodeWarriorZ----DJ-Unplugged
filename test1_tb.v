@@ -1,0 +1,75 @@
+`timescale 1ns / 1ps
+
+module ImageHasher_tb();
+    reg clk;
+    reg reset;
+    reg [7:0] pixel_data;
+    reg pixel_valid;
+    reg [5:0] threshold;
+    reg [63:0] ref_signature;
+
+    wire [63:0] current_signature;
+    wire duplicate;
+    wire ready;
+
+    reg [7:0] test_mem [0:63];
+    integer i;
+
+    ImageHasher uut (
+        .clk(clk), .reset(reset), .pixel_data(pixel_data),
+        .pixel_valid(pixel_valid), .threshold(threshold),
+        .ref_signature(ref_signature), .current_signature(current_signature),
+        .duplicate(duplicate), .ready(ready)
+    );
+
+    always #5 clk = ~clk;  // 100 MHz clock
+
+    initial begin
+        $dumpfile("wave.vcd");
+        $dumpvars(0, ImageHasher_tb);
+
+        // Initialization at time 0 uses blocking (=)
+        clk = 0; 
+        reset = 1; 
+        pixel_valid = 0; 
+        pixel_data = 0;
+        threshold = 5;
+        ref_signature = 64'hA5A5A5A5A5A5A5A5;
+
+        //$readmemh("image_data1.hex", test_mem);    //hex file with duplicate signature value
+      $readmemh("image_data.hex", test_mem);     // hex file without duplicate signature value
+
+
+        #20 reset <= 0; // Switching to non-blocking for synchronous transitions
+        #10;
+
+        // Feed 64 pixels with pixel_valid = 1
+        for (i = 0; i < 64; i = i + 1) begin
+            @(posedge clk);
+            // Fix: Non-blocking assignments (<=) prevent race conditions in simulation
+            pixel_data <= test_mem[i]; 
+            pixel_valid <= 1;
+        end
+
+        // Drop pixel_valid on the cycle immediately following the last valid pixel
+        @(posedge clk);
+        pixel_valid <= 0;
+        pixel_data <= 0;
+
+        // Wait for ready signal or timeout
+        fork
+            begin
+                wait(ready);
+                #10;
+                $display("Hash Generated: %h", current_signature);
+                $display("Duplicate Flag: %b", duplicate);
+                $finish;
+            end
+            begin
+                #5000;
+                $display("Timeout: ready never asserted!");
+                $finish;
+            end
+        join
+    end
+endmodule
